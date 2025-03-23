@@ -46,6 +46,8 @@ export const signup = async (req, res) => {
                 name: newUser.name,
                 email: newUser.email,
                 profilePic: newUser.profilePic,
+                createdAt: newUser.createdAt,
+                updatedAt: newUser.updatedAt,
             });
         }
         else {
@@ -91,6 +93,8 @@ export const login = async (req, res) => {
             name: user.name,
             email: user.email,
             profilePic: user.profilePic,
+            createdAt: user.createdAt,
+            updatedAt: user.updatedAt
         });
     } catch (error) {
         console.log("Failed to login user", error);
@@ -146,7 +150,16 @@ export const updateProfile = async (req, res) => {
 
 export const checkAuth = (req, res) => {
     try {
-        res.status(200).json({ message: 'User is authenticated', user: req.user });
+        const user = req.user
+        res.status(200).json({
+            message: 'User is authenticated',
+            _id: user._id,
+            name: user.name,
+            email: user.email,
+            profilePic: user.profilePic,
+            createdAt: user.createdAt,
+            updatedAt: user.updatedAt
+        });
     } catch (error) {
         console.log("Error in checkAuth Controller", error);
         res.status(500).json({

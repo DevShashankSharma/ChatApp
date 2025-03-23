@@ -10,7 +10,7 @@ const app = express();
 dotenv.config();
 const PORT = process.env.PORT;
 
-app.use(express.json());
+app.use(express.json({ limit: "50mb" }));  //! set limit to 50mb so that large files can be uploaded
 app.use(cookieParser());
 app.use(cors({
     origin: "http://localhost:5173",

@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { axiosInstance } from '../lib/axios'; 
+import { axiosInstance } from '../lib/axios';
 import toast from 'react-hot-toast';
 
 export const useAuthStore = create((set) => ({
@@ -13,7 +13,7 @@ export const useAuthStore = create((set) => ({
         try {
             const res = await axiosInstance.get('/auth/check');
 
-            set({ authUser: res.data})
+            set({ authUser: res.data })
         } catch (error) {
             console.log("Error in Checking Auth", error);
             set({ authUser: null })
@@ -58,4 +58,18 @@ export const useAuthStore = create((set) => ({
             set({ isLoggingIn: false });
         }
     },
+
+    updateProfile: async (data) => {
+        try {
+            set({ isUpdatingProfile: true });
+            const res = await axiosInstance.put('/auth/update-profile', data);
+            set({ authUser: res.data });
+            toast.success("Profile updated successfully");
+        } catch (error) {
+            toast.error(error.response.data.message);
+            console.log("Error updating profile", error);
+        } finally {
+            set({ isUpdatingProfile: false });
+        }
+    }
 }));

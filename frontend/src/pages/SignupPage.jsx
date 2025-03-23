@@ -95,6 +95,7 @@ const SignupPage = () => {
                                 <input
                                     type={showPassword ? "text" : "password"}
                                     placeholder="********"
+                                    autoComplete="off"
                                     className="input input-bordered pl-10 w-full"
                                     value={formData.password}
                                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
