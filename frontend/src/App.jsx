@@ -15,14 +15,14 @@ import { Toaster } from 'react-hot-toast'
 import Navbar from './components/Navbar'
 
 const App = () => {
-  const { authUser, checkAuth, isCheckingAuth } = useAuthStore();
+  const { authUser, checkAuth, isCheckingAuth, onlineUsers } = useAuthStore();
   const { theme } = useThemeStore();
 
   useEffect(() => {
     checkAuth();
   }, [checkAuth])
 
-  // console.log("AuthUser", authUser)
+  console.log("AuthUser", onlineUsers)
 
   if (isCheckingAuth && !authUser) {
     return (
