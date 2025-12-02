@@ -15,10 +15,7 @@ const PORT = process.env.PORT||8000;
 
 app.use(express.json({ limit: "50mb" }));  //! set limit to 50mb so that large files can be uploaded
 app.use(cookieParser());
-app.use(cors({
-    origin: "https://chatapprt.netlify.app/",  
-    credentials: true
-})); 
+app.use(cors()); 
 
 app.get("/", (req, res) => {
     res.send("Backend is running...");
