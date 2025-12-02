@@ -11,6 +11,8 @@ import { app, server, io } from '../lib/socket.js';
 dotenv.config();
 const PORT = process.env.PORT||8000;
 
+// CONNECT TO DATABASE FIRST
+await connectDB();
 
 
 app.use(express.json({ limit: "50mb" }));  //! set limit to 50mb so that large files can be uploaded
@@ -28,5 +30,5 @@ app.use("/api/messages", messageRoutes);
 
 server.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
-    connectDB();
+    // connectDB();
 });
