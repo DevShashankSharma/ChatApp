@@ -1,7 +1,6 @@
 import jwt from 'jsonwebtoken';
 import User from '../models/user.model.js';
 
-app.set("trust proxy", 1);
 
 export const protectRoute = async (req, res, next) => {
     try {

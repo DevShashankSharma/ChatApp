@@ -11,7 +11,6 @@ import { app, server, io } from '../lib/socket.js';
 dotenv.config();
 const PORT = process.env.PORT||8000;
 
-app.set("trust proxy", 1);
 
 // CONNECT TO DATABASE FIRST
 await connectDB();
@@ -21,9 +20,7 @@ app.use(express.json({ limit: "50mb" }));  //! set limit to 50mb so that large f
 app.use(cookieParser());
 app.use(cors({
     origin: "https://chatapprt.netlify.app",
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE"],
-    allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: true, 
 }));
 
 app.get("/", (req, res) => {
