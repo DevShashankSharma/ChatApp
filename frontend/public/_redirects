@@ -1,2 +1,5 @@
-# Rewrite a path
-/* /index.html    200
+# Proxy API requests to the backend (Fixes Cookie Issue)
+/api/* https://chat-app-ipbs.vercel.app/api/:splat  200
+
+# Handle React Router (SPA)
+/* /index.html  200

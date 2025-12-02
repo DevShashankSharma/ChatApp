@@ -9,8 +9,7 @@ const FRONTEND_URL = process.env.FRONTEND_URL || "https://chatapprt.netlify.app"
 
 const io = new Server(server, {
     cors: {
-        origin: [FRONTEND_URL], // frontend url
-        methods: ["GET", "POST"],
+        origin: [FRONTEND_URL, "http://localhost:5173"], // frontend url 
         credentials: true,
     },
 });
@@ -31,6 +30,21 @@ io.on("connection", (socket) => {
     // io.emit() -> sends events to all connected clients 
     io.emit("getOnlineUsers", Object.keys(userSocketMap));
 
+    // Listen for typing events
+    socket.on("typing", ({ chatId }) => {
+        const receiverSocketId = getReceiverSocketId(chatId);
+        if (receiverSocketId) {
+            io.to(receiverSocketId).emit("typing", { senderId: userId });
+        }
+    });
+
+    socket.on("stopTyping", ({ chatId }) => {
+        const receiverSocketId = getReceiverSocketId(chatId);
+        if (receiverSocketId) {
+            io.to(receiverSocketId).emit("stopTyping", { senderId: userId });
+        }
+    });
+    
     socket.on("disconnect", () => {
         console.log("User disconnected: ", socket.id);
 

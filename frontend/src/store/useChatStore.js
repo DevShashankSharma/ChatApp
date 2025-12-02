@@ -9,16 +9,15 @@ export const useChatStore = create((set, get) => ({
     selectedUser: null,
     isUsersLoading: false,
     isChatLoading: false,
+    isTyping: false, // Is the *other* user typing?
 
     getUsers: async () => {
+        set({ isUsersLoading: true });
         try {
-            set({ isUsersLoading: true });
-            const res = await axiosInstance.get("api/messages/users");
-            // console.log(res.data);
+            const res = await axiosInstance.get('/api/messages/users');
             set({ users: res.data.filteredUsers });
         } catch (error) {
-            console.log("Error in getting users", error);
-            toast.error("Error in getting users");
+            toast.error(error.response?.data?.message || "Error fetching users");
         } finally {
             set({ isUsersLoading: false });
         }
@@ -59,16 +58,31 @@ export const useChatStore = create((set, get) => ({
         const socket = useAuthStore.getState().socket;
 
         socket.on("newMessage", (newMessage) => {
-            if (newMessage.senderId !== selectedUser._id) return
-            set({
-                chats: [...get().chats, newMessage]
-            })
-        })
+            if (newMessage.senderId !== selectedUser._id) return;
+            set({ chats: [...get().chats, newMessage] });
+        });
+
+        // Listen for typing events
+        socket.on("typing", ({ senderId }) => {
+            if (senderId === selectedUser._id) {
+                set({ isTyping: true });
+            }
+        });
+
+        socket.on("stopTyping", ({ senderId }) => {
+            if (senderId === selectedUser._id) {
+                set({ isTyping: false });
+            }
+        });
     },
 
     unsubscribeFromMessages: () => {
         const socket = useAuthStore.getState().socket;
-        socket.off("newMessage");
+        if(socket) {
+            socket.off("newMessage");
+            socket.off("typing");
+            socket.off("stopTyping");
+        }
     },
 
     // Todo : Optimize it in future

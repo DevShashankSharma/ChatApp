@@ -9,8 +9,11 @@ import { app, server, io } from '../lib/socket.js';
 
 // const app = express();
 dotenv.config();
-const PORT = process.env.PORT||8000;
+const PORT = process.env.PORT||5000;
 const FRONTEND_URL = process.env.FRONTEND_URL || "https://chatapprt.netlify.app";
+
+// Trust the proxy (Netlify) to allow secure cookies
+app.set('trust proxy', 1);
 
 // CONNECT TO DATABASE FIRST
 await connectDB();
@@ -19,7 +22,7 @@ await connectDB();
 app.use(express.json({ limit: "50mb" }));  //! set limit to 50mb so that large files can be uploaded
 app.use(cookieParser());
 app.use(cors({
-    origin: FRONTEND_URL,
+    origin: [FRONTEND_URL, "http://localhost:5173"],  //! allow requests from frontend
     credentials: true, 
 }));
 
