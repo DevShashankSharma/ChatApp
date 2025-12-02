@@ -13,7 +13,7 @@ export const useChatStore = create((set, get) => ({
     getUsers: async () => {
         try {
             set({ isUsersLoading: true });
-            const res = await axiosInstance.get("/messages/users");
+            const res = await axiosInstance.get("api/messages/users");
             // console.log(res.data);
             set({ users: res.data.filteredUsers });
         } catch (error) {
@@ -27,7 +27,7 @@ export const useChatStore = create((set, get) => ({
     getChats: async (userId) => {
         try {
             set({ isChatLoading: true });
-            const res = await axiosInstance.get(`/messages/${userId}`);
+            const res = await axiosInstance.get(`api/messages/${userId}`);
             set({ chats: Array.isArray(res.data.messages) ? res.data.messages : [] });  // Ensure chats is always an array
             // console.log( res.data);
         } catch (error) {
@@ -44,7 +44,7 @@ export const useChatStore = create((set, get) => ({
             console.error("chats is not an array:", chats);
         }
         try {
-            const res = await axiosInstance.post(`/messages/send/${selectedUser._id}`, messageData);
+            const res = await axiosInstance.post(`api/messages/send/${selectedUser._id}`, messageData);
             set({ chats: [...(Array.isArray(chats) ? chats : []), res.data] }); // Ensure chats is an array before spreading
         } catch (error) {
             console.log("Error in sending message", error);

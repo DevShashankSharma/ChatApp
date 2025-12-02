@@ -8,6 +8,8 @@ const server = createServer(app);
 const io = new Server(server, {
     cors: {
         origin: ["https://chatapprt.netlify.app/"], // frontend url
+        methods: ["GET", "POST"],
+        credentials: true,
     },
 });
 
