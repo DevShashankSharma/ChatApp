@@ -5,9 +5,11 @@ import express from "express";
 const app = express();
 const server = createServer(app);
 
+const FRONTEND_URL = process.env.FRONTEND_URL || "https://chatapprt.netlify.app";
+
 const io = new Server(server, {
     cors: {
-        origin: ["https://chatapprt.netlify.app/"], // frontend url
+        origin: [FRONTEND_URL], // frontend url
         methods: ["GET", "POST"],
         credentials: true,
     },

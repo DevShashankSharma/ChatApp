@@ -13,8 +13,7 @@ export const generateToken = (userId , res) => {
         secure: true,    // only sent over HTTPS
         sameSite: 'none',  // csrf(cross site request forgery) protection
         maxAge: 7 * 24 * 60 * 60 * 1000, // Max-Age=604800; 7 days
-        path: '/',
-        domain: 'chatapprt.netlify.app'
+        path: '/'
     });
 
     return token;
