@@ -5,7 +5,7 @@ import MessageInput from "./MessageInput";
 import MessageSkeleton from "./skeletons/MessageSkeleton";
 import { useAuthStore } from "../store/useAuthStore";
 import { formatMessageTime } from "../lib/utils";
-import { motion, AnimatePresence } from "framer-motion"; // Add this package
+// import { motion, AnimatePresence } from "framer-motion"; // Add this package
 
 const ChatContainer = () => {
     const { chats, getChats, isChatLoading, selectedUser, subscribeToMessages, unsubscribeFromMessages, isTyping } = useChatStore();
