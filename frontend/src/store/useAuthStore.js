@@ -102,6 +102,17 @@ export const useAuthStore = create((set, get) => ({
         socket.on("getOnlineUsers", (usersIds) => {
             set({ onlineUsers: usersIds });
         });
+        socket.on("userOnline", (userId) => {
+            set((state) => ({ onlineUsers: Array.from(new Set([...state.onlineUsers, userId])) }));
+        });
+        socket.on("userOffline", (userId) => {
+            // backend emits without id in current impl for full list updates; handle both
+            if (!userId) {
+                // request will be refreshed by getOnlineUsers when emitted
+                return;
+            }
+            set((state) => ({ onlineUsers: state.onlineUsers.filter(id => id !== userId) }));
+        });
     },
 
     disconnectSocket: () => {

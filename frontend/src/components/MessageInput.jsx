@@ -2,12 +2,16 @@ import { useRef, useState } from "react";
 import { useChatStore } from "../store/useChatStore";
 import { X, Send, Image } from "lucide-react";
 import toast from "react-hot-toast";
+import { useAuthStore } from "../store/useAuthStore";
 
 const MessageInput = () => {
     const [text, setText] = useState("");
     const [imagePreview, setImagePreview] = useState(null);
     const fileInputRef = useRef(null);
     const { sendMessage } = useChatStore();
+    const { startTyping, stopTyping } = useChatStore();
+    const { authUser } = useAuthStore();
+    const typingTimeoutRef = useRef(null);
 
     const handleImageChange = (e) => {
         const file = e.target.files[0];
@@ -42,10 +46,15 @@ const MessageInput = () => {
             setText("");
             setImagePreview(null);
             if (fileInputRef.current) fileInputRef.current.value = "";
+            // stop typing after send
+            if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+            stopTyping(useChatStore.getState().selectedUser?._id);
         } catch (error) {
             console.log("Failed to sending message", error);
         }
     }
+
+    
 
     return (
         <div className="p-4 w-full">
@@ -77,7 +86,17 @@ const MessageInput = () => {
                         className="w-full input input-bordered rounded-lg input-sm sm:input-md"
                         placeholder="Type a message..."
                         value={text}
-                        onChange={(e) => setText(e.target.value)}
+                        onChange={(e) => {
+                            setText(e.target.value);
+                            // emit typing with debounce
+                            const receiverId = useChatStore.getState().selectedUser?._id;
+                            if (!receiverId || !authUser) return;
+                            startTyping(receiverId);
+                            if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+                            typingTimeoutRef.current = setTimeout(() => {
+                                stopTyping(receiverId);
+                            }, 1500);
+                        }}
                     />
                     <input
                         type="file"

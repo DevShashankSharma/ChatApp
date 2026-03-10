@@ -7,7 +7,10 @@ const server = createServer(app);
 
 const io = new Server(server, {
     cors: {
-        origin: "https://chat-app-xl4c.vercel.app",
+        origin: [
+            "http://localhost:5173",
+            "https://chat-app-xl4c.vercel.app"
+        ],
         credentials: true
     }
 });
@@ -28,6 +31,30 @@ io.on("connection", (socket) => {
     // io.emit() -> sends events to all connected clients 
     io.emit("getOnlineUsers", Object.keys(userSocketMap));
 
+    // presence notify single user join
+    if (userId) {
+        io.emit("userOnline", userId);
+    }
+
+    // 🔵 TYPING EVENT
+    socket.on("typing", (receiverId) => {
+        const receiverSocketId = getReceiverSocketId(receiverId);
+
+        if (receiverSocketId) {
+            io.to(receiverSocketId).emit("typing");
+        }
+    });
+
+    // 🔵 STOP TYPING
+    socket.on("stopTyping", (receiverId) => {
+        const receiverSocketId = getReceiverSocketId(receiverId);
+
+        if (receiverSocketId) {
+            io.to(receiverSocketId).emit("stopTyping");
+        }
+    });
+
+
     socket.on("disconnect", () => {
         console.log("User disconnected: ", socket.id);
 
@@ -37,6 +64,78 @@ io.on("connection", (socket) => {
                 delete userSocketMap[key];
                 break;
             }
+        }
+        // broadcast updated online list and presence event
+        io.emit("getOnlineUsers", Object.keys(userSocketMap));
+        io.emit("userOffline");
+    });
+
+    // Read receipt: payload { messageId, readerId }
+    socket.on("messageRead", (payload) => {
+        const { receiverId, messageId, readerId } = payload;
+        const receiverSocketId = getReceiverSocketId(receiverId);
+        if (receiverSocketId) {
+            io.to(receiverSocketId).emit("messageRead", { messageId, readerId });
+        }
+    });
+
+    // Message edited
+    socket.on("editMessage", (payload) => {
+        const { receiverId, message } = payload; // message is updated message doc
+        const receiverSocketId = getReceiverSocketId(receiverId);
+        if (receiverSocketId) {
+            io.to(receiverSocketId).emit("editMessage", message);
+        }
+    });
+
+    // Message deleted
+    socket.on("deleteMessage", (payload) => {
+        const { receiverId, messageId } = payload;
+        const receiverSocketId = getReceiverSocketId(receiverId);
+        if (receiverSocketId) {
+            io.to(receiverSocketId).emit("deleteMessage", { messageId });
+        }
+    });
+
+    // Reaction added/removed
+    socket.on("reaction", (payload) => {
+        const { receiverId, message } = payload;
+        const receiverSocketId = getReceiverSocketId(receiverId);
+        if (receiverSocketId) {
+            io.to(receiverSocketId).emit("reaction", message);
+        }
+    });
+
+    // Simple WebRTC signaling events for call setup
+    socket.on("callUser", (data) => {
+        const { userToCall, from, signalData, callType } = data;
+        const targetSocket = getReceiverSocketId(userToCall);
+        if (targetSocket) {
+            io.to(targetSocket).emit("incomingCall", { from, signalData, callType });
+        }
+    });
+
+    socket.on("answerCall", (data) => {
+        const { to, signalData } = data;
+        const targetSocket = getReceiverSocketId(to);
+        if (targetSocket) {
+            io.to(targetSocket).emit("callAnswered", { signalData });
+        }
+    });
+
+    socket.on("rejectCall", (data) => {
+        const { to } = data;
+        const targetSocket = getReceiverSocketId(to);
+        if (targetSocket) {
+            io.to(targetSocket).emit("callRejected");
+        }
+    });
+
+    socket.on("endCall", (data) => {
+        const { to } = data;
+        const targetSocket = getReceiverSocketId(to);
+        if (targetSocket) {
+            io.to(targetSocket).emit("callEnded");
         }
     });
 });

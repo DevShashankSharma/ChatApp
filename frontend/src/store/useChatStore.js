@@ -9,6 +9,7 @@ export const useChatStore = create((set, get) => ({
     selectedUser: null,
     isUsersLoading: false,
     isChatLoading: false,
+    isTyping: false,
 
     getUsers: async () => {
         try {
@@ -52,6 +53,59 @@ export const useChatStore = create((set, get) => ({
         }
     },
 
+    editMessage: async (messageId, text) => {
+        try {
+            const res = await axiosInstance.put(`/messages/edit/${messageId}`, { text });
+            // update local chats
+            set({ chats: get().chats.map(c => (c._id === messageId ? res.data.message : c)) });
+        } catch (error) {
+            console.log('Error editing message', error);
+            toast.error('Error editing message');
+        }
+    },
+
+    deleteMessage: async (messageId, forEveryone = false) => {
+        try {
+            await axiosInstance.delete(`/messages/${messageId}${forEveryone ? '?forEveryone=true' : ''}`);
+            set({ chats: get().chats.filter(c => c._id !== messageId) });
+        } catch (error) {
+            console.log('Error deleting message', error);
+            toast.error('Error deleting message');
+        }
+    },
+
+    markAsRead: async (messageId) => {
+        try {
+            await axiosInstance.post(`/messages/${messageId}/read`);
+            // optimistic UI: add current user to readBy
+            const userId = useAuthStore.getState().authUser._id;
+            set({ chats: get().chats.map(m => m._id === messageId ? { ...m, readBy: Array.isArray(m.readBy) ? Array.from(new Set([...m.readBy, userId])) : [userId] } : m) });
+        } catch (error) {
+            console.log('Error marking as read', error);
+        }
+    },
+
+    addReaction: async (messageId, emoji) => {
+        try {
+            const res = await axiosInstance.post(`/messages/${messageId}/reaction`, { emoji });
+            set({ chats: get().chats.map(c => c._id === messageId ? res.data.message : c) });
+        } catch (error) {
+            console.log('Error adding reaction', error);
+            toast.error('Error adding reaction');
+        }
+    },
+
+    searchMessages: async (q) => {
+        try {
+            const res = await axiosInstance.get(`/messages/search?q=${encodeURIComponent(q)}`);
+            return res.data.results || [];
+        } catch (error) {
+            console.log('Error searching messages', error);
+            toast.error('Error searching messages');
+            return [];
+        }
+    },
+
     subscribeToMessages: () => {
         const { selectedUser } = get();
         if (!selectedUser) return;
@@ -59,18 +113,55 @@ export const useChatStore = create((set, get) => ({
         const socket = useAuthStore.getState().socket;
 
         socket.on("newMessage", (newMessage) => {
-            if (newMessage.senderId !== selectedUser._id) return
-            set({
-                chats: [...get().chats, newMessage]
-            })
-        })
+            if (String(newMessage.senderId) !== String(selectedUser._id) && String(newMessage.receiverId) !== String(selectedUser._id)) return;
+            set({ chats: [...get().chats, newMessage] });
+        });
+
+        socket.on('editMessage', (message) => {
+            set({ chats: get().chats.map(c => c._id === message._id ? message : c) });
+        });
+
+        socket.on('deleteMessage', ({ messageId }) => {
+            set({ chats: get().chats.filter(c => c._id !== messageId) });
+        });
+
+        socket.on('reaction', (message) => {
+            set({ chats: get().chats.map(c => c._id === message._id ? message : c) });
+        });
+
+        socket.on('messageRead', ({ messageId, readerId }) => {
+            set({ chats: get().chats.map(m => m._id === messageId ? { ...m, readBy: Array.isArray(m.readBy) ? Array.from(new Set([...m.readBy, readerId])) : [readerId] } : m) });
+        });
+
+        socket.on('typing', () => {
+            set({ isTyping: true });
+        });
+        socket.on('stopTyping', () => {
+            set({ isTyping: false });
+        });
     },
 
     unsubscribeFromMessages: () => {
         const socket = useAuthStore.getState().socket;
         socket.off("newMessage");
+        socket.off('editMessage');
+        socket.off('deleteMessage');
+        socket.off('reaction');
+        socket.off('messageRead');
+        socket.off('typing');
+        socket.off('stopTyping');
     },
 
     // Todo : Optimize it in future
     setSelectedUser: (selectedUser) => set({ selectedUser }),
+    startTyping: (receiverId) => {
+        const socket = useAuthStore.getState().socket;
+        if (!socket) return;
+        socket.emit('typing', receiverId);
+    },
+    stopTyping: (receiverId) => {
+        const socket = useAuthStore.getState().socket;
+        if (!socket) return;
+        socket.emit('stopTyping', receiverId);
+    }
 }));
