@@ -1,6 +1,7 @@
 import express from 'express';
 import authRoutes from './routes/auth.route.js';
 import messageRoutes from './routes/message.route.js';
+import announcementRoutes from './routes/announcement.route.js';
 import { connectDB } from './lib/db.js';
 import dotenv from "dotenv";
 import cookieParser from 'cookie-parser';
@@ -26,6 +27,7 @@ app.set("trust proxy", 1);
 
 app.use("/api/auth", authRoutes);
 app.use("/api/messages", messageRoutes);
+app.use("/api/announcements", announcementRoutes);
 
 server.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);

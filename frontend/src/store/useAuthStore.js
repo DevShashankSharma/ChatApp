@@ -7,10 +7,13 @@ const BASE_URL = "https://chatapp-backend-nl5h.onrender.com";
 
 export const useAuthStore = create((set, get) => ({
     authUser: null,
-    isSingningUp: false,
+    isSigningUp: false,
     isLoggingIn: false,
     isUpdatingProfile: false,
     onlineUsers: [],
+    announcements: [],
+    isAdmin: false,
+    typingAllUser: null,
     socket: null,
     isCheckingAuth: true,
 
@@ -99,6 +102,20 @@ export const useAuthStore = create((set, get) => ({
         
         set({ socket: socket });
 
+        // announcement realtime
+        socket.on('announcement', (announcement) => {
+            set((state) => ({ announcements: [announcement, ...state.announcements] }));
+        });
+
+        socket.on('typingAll', ({ userId }) => {
+            set({ typingAllUser: userId });
+        });
+
+        socket.on('stopTypingAll', ({ userId }) => {
+            const current = get().typingAllUser;
+            if (current === userId) set({ typingAllUser: null });
+        });
+
         socket.on("getOnlineUsers", (usersIds) => {
             set({ onlineUsers: usersIds });
         });
@@ -113,6 +130,27 @@ export const useAuthStore = create((set, get) => ({
             }
             set((state) => ({ onlineUsers: state.onlineUsers.filter(id => id !== userId) }));
         });
+    },
+
+    fetchAnnouncements: async () => {
+        try {
+            const res = await axiosInstance.get('/announcements');
+            set({ announcements: res.data.announcements || [], isAdmin: !!res.data.isAdmin });
+        } catch (error) {
+            console.log('Error fetching announcements', error);
+        }
+    },
+
+    postAnnouncement: async (payload) => {
+        try {
+            const res = await axiosInstance.post('/announcements', payload);
+            // server will broadcast; also optimistically add
+            set((state) => ({ announcements: [res.data.announcement, ...state.announcements] }));
+            return res.data.announcement;
+        } catch (error) {
+            console.log('Error posting announcement', error);
+            throw error;
+        }
     },
 
     disconnectSocket: () => {

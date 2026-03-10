@@ -45,6 +45,16 @@ io.on("connection", (socket) => {
         }
     });
 
+    // 🔵 TYPING TO ALL (for global announcements / group)
+    socket.on('typingAll', () => {
+        // broadcast to everyone that this user is typing in global chat
+        io.emit('typingAll', { userId });
+    });
+
+    socket.on('stopTypingAll', () => {
+        io.emit('stopTypingAll', { userId });
+    });
+
     // 🔵 STOP TYPING
     socket.on("stopTyping", (receiverId) => {
         const receiverSocketId = getReceiverSocketId(receiverId);
