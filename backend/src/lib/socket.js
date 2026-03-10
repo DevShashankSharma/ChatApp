@@ -7,7 +7,7 @@ const server = createServer(app);
 
 const io = new Server(server, {
     cors: {
-        origin: "https://chat-app-xl4c-6rm6wema3-kankreliyaroopnarayangmailcoms-projects.vercel.app",
+        origin: "https://chat-app-xl4c.vercel.app",
         credentials: true
     }
 });

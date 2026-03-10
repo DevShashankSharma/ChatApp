@@ -16,7 +16,7 @@ const PORT = process.env.PORT;
 app.use(express.json({ limit: "50mb" }));  //! set limit to 50mb so that large files can be uploaded
 app.use(cookieParser());
 app.use(cors({
-    origin: "https://chat-app-xl4c-6rm6wema3-kankreliyaroopnarayangmailcoms-projects.vercel.app", 
+    origin: "https://chat-app-xl4c.vercel.app", 
     credentials: true
 }));
 
