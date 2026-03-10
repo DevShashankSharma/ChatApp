@@ -7,8 +7,9 @@ const server = createServer(app);
 
 const io = new Server(server, {
     cors: {
-        origin: ["http://localhost:5173"], // frontend url
-    },
+        origin: "https://chat-app-xl4c-6rm6wema3-kankreliyaroopnarayangmailcoms-projects.vercel.app",
+        credentials: true
+    }
 });
 
 export const getReceiverSocketId = (receiverId) => {
