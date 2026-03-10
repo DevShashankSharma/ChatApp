@@ -1,9 +1,9 @@
 import { create } from 'zustand';
 import { axiosInstance } from '../lib/axios';
 import toast from 'react-hot-toast';
-import { io } from 'socket.io-client'; 
+import { io } from 'socket.io-client';
 
-const BASE_URL = "http://localhost:5005";
+const BASE_URL = "https://chatapp-backend-nl5h.onrender.com";
 
 export const useAuthStore = create((set, get) => ({
     authUser: null,
@@ -16,7 +16,7 @@ export const useAuthStore = create((set, get) => ({
 
     checkAuth: async () => {
         try {
-            const res = await axiosInstance.get('api/auth/check');
+            const res = await axiosInstance.get('/auth/check');
 
             set({ authUser: res.data })
 
@@ -32,7 +32,7 @@ export const useAuthStore = create((set, get) => ({
     signup: async (data) => {
         try {
             set({ isSigningUp: true })
-            const res = await axiosInstance.post('api/auth/signup', data);
+            const res = await axiosInstance.post('/auth/signup', data);
             set({ authUser: res.data })
             toast.success("Account created successfully");
 
@@ -46,7 +46,7 @@ export const useAuthStore = create((set, get) => ({
 
     logout: async () => {
         try {
-            await axiosInstance.post('api/auth/logout');
+            await axiosInstance.post('/auth/logout');
             set({ authUser: null });
             toast.success("Logged out successfully");
 
@@ -60,7 +60,7 @@ export const useAuthStore = create((set, get) => ({
     login: async (data) => {
         try {
             set({ isLoggingIn: true });
-            const res = await axiosInstance.post('api/auth/login', data);
+            const res = await axiosInstance.post('/auth/login', data);
             set({ authUser: res.data });
             toast.success("Logged in successfully");
 
@@ -75,7 +75,7 @@ export const useAuthStore = create((set, get) => ({
     updateProfile: async (data) => {
         try {
             set({ isUpdatingProfile: true });
-            const res = await axiosInstance.put('api/auth/update-profile', data);
+            const res = await axiosInstance.put('/auth/update-profile', data);
             set({ authUser: res.data });
             toast.success("Profile updated successfully");
         } catch (error) {
@@ -107,4 +107,4 @@ export const useAuthStore = create((set, get) => ({
     disconnectSocket: () => {
         if (get().socket?.connected) get().socket.disconnect();
     },
-})); 
+}));
