@@ -50,24 +50,28 @@ const MeetingRoom = () => {
         // register handlers BEFORE emitting join to avoid race
         socket.on('allParticipants', ({ participants }) => {
           console.debug('[meeting] allParticipants', participants)
-          // create peers as initiator for each existing participant
-          participants.forEach((socketId) => {
+          // participants may be array of socketId strings OR objects { socketId, name }
+          participants.forEach((p) => {
+            const socketId = typeof p === 'string' ? p : p.socketId
+            const name = typeof p === 'object' ? p.name : socketId
             const peer = new SimplePeer({ initiator: true, trickle: false, stream })
             peer.on('signal', (signal) => {
               console.debug('[meeting] sending signal to', socketId)
               socket.emit('signal', { to: socketId, signal })
             })
             peer.on('stream', (remoteStream) => {
-              console.debug('[meeting] got remote stream from', socketId)
+              console.debug('[meeting] got remote stream from', socketId, remoteStream && remoteStream.getTracks().length)
               addPeer(socketId, peer, remoteStream)
             })
             peersRef.current[socketId] = { peer }
-            setPeers((p) => ({ ...p, [socketId]: { peer, stream: null } }))
+            setPeers((pstate) => ({ ...pstate, [socketId]: { peer, stream: null, name } }))
           })
         })
 
-        socket.on('newParticipant', ({ socketId }) => {
-          // new participant joined; we will wait for their signal and respond when received
+        socket.on('newParticipant', ({ socketId, name }) => {
+          console.debug('[meeting] newParticipant', socketId, name)
+          // create placeholder entry; peer will be created when we receive their signal
+          setPeers((pstate) => ({ ...pstate, [socketId]: { peer: null, stream: null, name: name || socketId } }))
         })
 
         socket.on('signal', ({ from, signal }) => {
@@ -95,8 +99,9 @@ const MeetingRoom = () => {
           removePeer(socketId)
         })
 
-        // now join
-        socket.emit('joinMeeting', { roomId: id })
+        // now join (send display name so others can show it)
+        const displayName = authUser?.name || authUser?.username || 'Anonymous'
+        socket.emit('joinMeeting', { roomId: id, displayName })
 
       } catch (error) {
         console.error('getUserMedia error', error)
@@ -128,8 +133,9 @@ const MeetingRoom = () => {
   }, [id, socket, authUser, navigate])
 
   const addPeer = (socketId, peer, stream) => {
-    peersRef.current[socketId] = { peer, stream }
-    setPeers((p) => ({ ...p, [socketId]: { peer, stream } }))
+    const existingName = (peers && peers[socketId] && peers[socketId].name) || null
+    peersRef.current[socketId] = { peer, stream, name: existingName }
+    setPeers((p) => ({ ...p, [socketId]: { peer, stream, name: existingName } }))
     if (stream) {
       try {
         const audio = document.createElement('audio')
@@ -170,6 +176,16 @@ const MeetingRoom = () => {
       if (!stream) return
       stream.getVideoTracks().forEach(t => t.enabled = !videoEnabled)
       setVideoEnabled(!videoEnabled)
+    }
+
+    const enableAudioAll = async () => {
+      try {
+        audioElsRef.current.forEach(a => {
+          try { a.play && a.play().catch(()=>{}) } catch(e) {}
+        })
+      } catch (e) {
+        console.warn('enableAudioAll failed', e)
+      }
     }
 
     const startScreenShare = async () => {
@@ -238,9 +254,9 @@ const MeetingRoom = () => {
 
     const tiles = []
     if (localStreamRef.current) {
-      tiles.push({ id: 'me', stream: localStreamRef.current, local: true })
+      tiles.push({ id: 'me', stream: localStreamRef.current, local: true, name: authUser?.name || authUser?.username || 'You' })
     }
-    Object.entries(peers).forEach(([k, v]) => tiles.push({ id: k, stream: v.stream, local: false }))
+    Object.entries(peers).forEach(([k, v]) => tiles.push({ id: k, stream: v.stream, local: false, name: v.name || k }))
 
     return (
       <div className="min-h-screen p-4">
@@ -258,6 +274,7 @@ const MeetingRoom = () => {
               ) : (
                 <button className="btn btn-sm" onClick={stopScreenShare}>Stop Share</button>
               )}
+              <button className="btn btn-sm" onClick={enableAudioAll}>Enable Audio</button>
             </div>
             <div className="ml-auto">
               <button className="btn btn-sm btn-error" onClick={leaveMeeting}><LogOut size={16} /> Leave</button>
@@ -267,9 +284,9 @@ const MeetingRoom = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {tiles.map((t) => (
               <div key={t.id} className="relative bg-base-100 rounded overflow-hidden">
-                <Video stream={t.stream} muted={t.local} />
+                <Video stream={t.stream} muted={true} />
                 <div className="absolute left-2 bottom-2 bg-black/50 text-white text-xs px-2 py-1 rounded flex items-center gap-2">
-                  <span className="font-medium">{t.local ? (authUser?.name || authUser?.username || 'You') : t.id}</span>
+                  <span className="font-medium">{t.name || (t.local ? (authUser?.name || authUser?.username || 'You') : t.id)}</span>
                   {t.local && (
                     <>
                       {audioEnabled ? <Mic size={12} /> : <MicOff size={12} />}

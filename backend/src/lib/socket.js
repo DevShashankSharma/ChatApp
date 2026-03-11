@@ -17,6 +17,8 @@ const io = new Server(server, {
 
 // meeting rooms map: roomId -> Set of socketIds
 const meetingRooms = {};
+// meeting rooms info: roomId -> Map of socketId -> { name }
+const meetingRoomsInfo = {};
 
 export const getReceiverSocketId = (receiverId) => {
     return userSocketMap[receiverId];
@@ -84,18 +86,20 @@ io.on("connection", (socket) => {
     });
 
     // ----- Meeting room handlers -----
-    socket.on('joinMeeting', ({ roomId }) => {
+    socket.on('joinMeeting', ({ roomId, displayName }) => {
         if (!roomId) return;
         socket.join(roomId);
         if (!meetingRooms[roomId]) meetingRooms[roomId] = new Set();
         meetingRooms[roomId].add(socket.id);
+        if (!meetingRoomsInfo[roomId]) meetingRoomsInfo[roomId] = {};
+        meetingRoomsInfo[roomId][socket.id] = { name: displayName || 'Anonymous' };
 
-        // send existing participants to the joining socket
-        const others = Array.from(meetingRooms[roomId]).filter(id => id !== socket.id);
+        // send existing participants (with names) to the joining socket
+        const others = Array.from(meetingRooms[roomId]).filter(id => id !== socket.id).map(id => ({ socketId: id, name: meetingRoomsInfo[roomId]?.[id]?.name || id }));
         io.to(socket.id).emit('allParticipants', { participants: others });
 
         // notify others that a new participant joined
-        socket.to(roomId).emit('newParticipant', { socketId: socket.id });
+        socket.to(roomId).emit('newParticipant', { socketId: socket.id, name: meetingRoomsInfo[roomId][socket.id].name });
     });
 
     socket.on('signal', ({ to, signal }) => {
@@ -109,7 +113,13 @@ io.on("connection", (socket) => {
         if (meetingRooms[roomId]) {
             meetingRooms[roomId].delete(socket.id);
             socket.to(roomId).emit('participantLeft', { socketId: socket.id });
-            if (meetingRooms[roomId].size === 0) delete meetingRooms[roomId];
+            if (meetingRooms[roomId].size === 0) {
+                delete meetingRooms[roomId];
+                delete meetingRoomsInfo[roomId];
+            } else {
+                // remove from info map
+                if (meetingRoomsInfo[roomId]) delete meetingRoomsInfo[roomId][socket.id];
+            }
         }
     });
 
