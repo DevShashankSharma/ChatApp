@@ -54,7 +54,15 @@ const MeetingRoom = () => {
           participants.forEach((p) => {
             const socketId = typeof p === 'string' ? p : p.socketId
             const name = typeof p === 'object' ? p.name : socketId
-            const peer = new SimplePeer({ initiator: true, trickle: false, stream })
+            const peer = new SimplePeer({
+              initiator: true,
+              trickle: true,
+              stream,
+              config: { iceServers: [ { urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' } ] }
+            })
+            peer.on('error', (err) => console.error('[meeting-peer] error (initiator)', socketId, err))
+            peer.on('close', () => console.debug('[meeting-peer] close (initiator)', socketId))
+            peer.on('connect', () => console.debug('[meeting-peer] connected (initiator)', socketId))
             peer.on('signal', (signal) => {
               console.debug('[meeting] sending signal to', socketId)
               socket.emit('signal', { to: socketId, signal })
@@ -80,7 +88,15 @@ const MeetingRoom = () => {
           if (peersRef.current[from]?.peer) {
             peersRef.current[from].peer.signal(signal)
           } else {
-            const peer = new SimplePeer({ initiator: false, trickle: false, stream })
+            const peer = new SimplePeer({
+              initiator: false,
+              trickle: true,
+              stream,
+              config: { iceServers: [ { urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' } ] }
+            })
+            peer.on('error', (err) => console.error('[meeting-peer] error (responder)', from, err))
+            peer.on('close', () => console.debug('[meeting-peer] close (responder)', from))
+            peer.on('connect', () => console.debug('[meeting-peer] connected (responder)', from))
             peer.on('signal', (sig) => {
               console.debug('[meeting] replying signal to', from)
               socket.emit('signal', { to: from, signal: sig })
