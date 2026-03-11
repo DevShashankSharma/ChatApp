@@ -35,11 +35,17 @@ export const getMessages = async (req, res) => {
 
 
         //! Get all messages between the logged in user and the user to chat with
+        // Exclude messages that have been deleted for everyone (deleted: true)
         const messages = await Message.find({
-            $or: [
-                { senderId: myId, receiverId: userToChatId },
-                { senderId: userToChatId, receiverId: myId },
-            ],
+            $and: [
+                {
+                    $or: [
+                        { senderId: myId, receiverId: userToChatId },
+                        { senderId: userToChatId, receiverId: myId },
+                    ],
+                },
+                { deleted: { $ne: true } }
+            ]
         });
 
         res.status(200).json({

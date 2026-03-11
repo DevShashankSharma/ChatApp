@@ -70,10 +70,12 @@ export const useChatStore = create((set, get) => ({
             const res = await axiosInstance.delete(`/messages/${messageId}${forEveryone ? '?forEveryone=true' : ''}`);
             console.log('deleteMessage response', res?.data);
             set({ chats: get().chats.filter(c => c._id !== messageId) });
+            return res.data;
         } catch (error) {
             console.log('Error deleting message', error?.response || error);
             const msg = error?.response?.data?.message || error?.message || 'Error deleting message';
             toast.error(msg);
+            throw error;
         }
     },
 

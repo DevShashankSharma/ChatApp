@@ -22,6 +22,7 @@ const MessageBubble = ({
 
     const ref = useRef(null);
     const [showReactions, setShowReactions] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     const isMine = String(chat.senderId) === String(authUser._id);
 
@@ -169,9 +170,21 @@ const MessageBubble = ({
 
                             <button
                                 className="btn btn-ghost btn-xs"
-                                onClick={() => deleteMessage(chat._id, true)}
+                                onClick={async () => {
+                                    // confirm and choose delete mode
+                                    const everyone = confirm('Delete for everyone? OK = yes, Cancel = no (delete for me)');
+                                    try {
+                                        setIsDeleting(true);
+                                        await deleteMessage(chat._id, everyone);
+                                    } catch (err) {
+                                        // error handled in store; keep UI stable
+                                    } finally {
+                                        setIsDeleting(false);
+                                    }
+                                }}
+                                disabled={isDeleting}
                             >
-                                <Trash2 size={14} />
+                                {isDeleting ? <span className="loading loading-spinner loading-sm" /> : <Trash2 size={14} />}
                             </button>
                         </>
                     )}
