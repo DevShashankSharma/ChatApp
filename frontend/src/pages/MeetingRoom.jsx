@@ -48,67 +48,83 @@ const MeetingRoom = () => {
         const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true })
         localStreamRef.current = stream
         // register handlers BEFORE emitting join to avoid race
+        // When joining, don't immediately create initiator peers. Existing
+        // participants will initiate connections to the newcomer. Create
+        // placeholders (peer: null) and wait for incoming signals.
         socket.on('allParticipants', ({ participants }) => {
-          console.debug('[meeting] allParticipants', participants)
-          // participants may be array of socketId strings OR objects { socketId, name }
+          console.debug('[meeting] allParticipants (joiner)', participants)
           participants.forEach((p) => {
             const socketId = typeof p === 'string' ? p : p.socketId
             const name = typeof p === 'object' ? p.name : socketId
-            const peer = new SimplePeer({
-              initiator: true,
-              trickle: true,
-              stream,
-              config: { iceServers: [ { urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' } ] }
-            })
-            peer.on('error', (err) => console.error('[meeting-peer] error (initiator)', socketId, err))
-            peer.on('close', () => console.debug('[meeting-peer] close (initiator)', socketId))
-            peer.on('connect', () => console.debug('[meeting-peer] connected (initiator)', socketId))
-            peer.on('signal', (signal) => {
-              console.debug('[meeting] sending signal to', socketId)
-              socket.emit('signal', { to: socketId, signal })
-            })
-            peer.on('stream', (remoteStream) => {
-              console.debug('[meeting] got remote stream from', socketId, remoteStream && remoteStream.getTracks().length)
-              addPeer(socketId, peer, remoteStream)
-            })
-            peersRef.current[socketId] = { peer }
-            setPeers((pstate) => ({ ...pstate, [socketId]: { peer, stream: null, name } }))
+            peersRef.current[socketId] = { peer: null, stream: null, name }
+            setPeers((ps) => ({ ...ps, [socketId]: { peer: null, stream: null, name } }))
           })
         })
 
+        // Existing participants create initiator peers for newcomers.
         socket.on('newParticipant', ({ socketId, name }) => {
-          console.debug('[meeting] newParticipant', socketId, name)
-          // create placeholder entry; peer will be created when we receive their signal
-          setPeers((pstate) => ({ ...pstate, [socketId]: { peer: null, stream: null, name: name || socketId } }))
+          console.debug('[meeting] newParticipant (existing) creating initiator', socketId, name)
+          if (peersRef.current[socketId]?.peer) return
+          const initiatorPeer = new SimplePeer({
+            initiator: true,
+            trickle: true,
+            stream: localStreamRef.current,
+            config: { iceServers: [ { urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' } ] }
+          })
+          initiatorPeer.on('signal', (signal) => {
+            console.debug('[meeting] sending signal to new participant', socketId)
+            socket.emit('signal', { to: socketId, signal })
+          })
+          initiatorPeer.on('stream', (remoteStream) => {
+            console.debug('[meeting] got remote stream from new participant', socketId)
+            addPeer(socketId, initiatorPeer, remoteStream)
+          })
+          initiatorPeer.on('error', (err) => console.error('[meeting-peer] error (initiator->new)', socketId, err))
+          initiatorPeer.on('close', () => console.debug('[meeting-peer] close (initiator->new)', socketId))
+          initiatorPeer.on('connect', () => console.debug('[meeting-peer] connected (initiator->new)', socketId))
+          peersRef.current[socketId] = { peer: initiatorPeer, name: name || socketId }
+          setPeers((ps) => ({ ...ps, [socketId]: { peer: initiatorPeer, stream: null, name: name || socketId } }))
         })
 
         socket.on('signal', ({ from, signal }) => {
           console.debug('[meeting] signal from', from)
-          // if peer exists, signal it, else create as non-initiator
-          if (peersRef.current[from]?.peer) {
-            peersRef.current[from].peer.signal(signal)
-          } else {
-            const peer = new SimplePeer({
-              initiator: false,
-              trickle: true,
-              stream,
-              config: { iceServers: [ { urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' } ] }
-            })
-            peer.on('error', (err) => console.error('[meeting-peer] error (responder)', from, err))
-            peer.on('close', () => console.debug('[meeting-peer] close (responder)', from))
-            peer.on('connect', () => console.debug('[meeting-peer] connected (responder)', from))
-            peer.on('signal', (sig) => {
-              console.debug('[meeting] replying signal to', from)
-              socket.emit('signal', { to: from, signal: sig })
-            })
-            peer.on('stream', (remoteStream) => {
-              console.debug('[meeting] got remote stream (non-initiator) from', from)
-              addPeer(from, peer, remoteStream)
-            })
-            peer.signal(signal)
-            peersRef.current[from] = { peer }
-            setPeers((p) => ({ ...p, [from]: { peer, stream: null } }))
+          const existing = peersRef.current[from]
+          if (existing?.peer) {
+            // guard against signaling destroyed peers
+            try {
+              if (!existing.peer.destroyed) existing.peer.signal(signal)
+              else console.warn('[meeting] received signal for destroyed peer', from)
+            } catch (e) {
+              console.error('[meeting] error signaling existing peer', from, e)
+            }
+            return
           }
+
+          // create responder peer (we are the joiner or the responder side)
+          const responder = new SimplePeer({
+            initiator: false,
+            trickle: true,
+            stream: localStreamRef.current,
+            config: { iceServers: [ { urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' } ] }
+          })
+          responder.on('signal', (sig) => {
+            console.debug('[meeting] replying signal to', from)
+            socket.emit('signal', { to: from, signal: sig })
+          })
+          responder.on('stream', (remoteStream) => {
+            console.debug('[meeting] got remote stream (responder) from', from)
+            addPeer(from, responder, remoteStream)
+          })
+          responder.on('error', (err) => console.error('[meeting-peer] error (responder)', from, err))
+          responder.on('close', () => console.debug('[meeting-peer] close (responder)', from))
+          responder.on('connect', () => console.debug('[meeting-peer] connected (responder)', from))
+          try {
+            responder.signal(signal)
+          } catch (e) {
+            console.error('[meeting] failed to signal responder', from, e)
+          }
+          peersRef.current[from] = { peer: responder }
+          setPeers((p) => ({ ...p, [from]: { peer: responder, stream: null, name: existing?.name || from } }))
         })
 
         socket.on('participantLeft', ({ socketId }) => {
