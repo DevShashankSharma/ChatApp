@@ -60,12 +60,7 @@ const SideBar = () => {
                                 <span className="absolute bottom-0 right-0 size-3 bg-green-500 rounded-full ring-2 ring-zinc-900" />
                             )}
 
-                            {/* Unread count badge */}
-                            {user.unreadCount > 0 && (
-                                <span className="absolute -top-1 -right-1 unread-count hidden lg:inline-flex" aria-label={`${user.unreadCount} unread messages`}>
-                                    {user.unreadCount}
-                                </span>
-                            )}
+                            {/* (unread badge removed) */}
                         </div>
 
                         {/* User info - only visible on larger screens */}

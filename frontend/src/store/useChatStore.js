@@ -66,11 +66,14 @@ export const useChatStore = create((set, get) => ({
 
     deleteMessage: async (messageId, forEveryone = false) => {
         try {
-            await axiosInstance.delete(`/messages/${messageId}${forEveryone ? '?forEveryone=true' : ''}`);
+            console.log('deleteMessage called for', messageId, 'forEveryone=', forEveryone);
+            const res = await axiosInstance.delete(`/messages/${messageId}${forEveryone ? '?forEveryone=true' : ''}`);
+            console.log('deleteMessage response', res?.data);
             set({ chats: get().chats.filter(c => c._id !== messageId) });
         } catch (error) {
-            console.log('Error deleting message', error);
-            toast.error('Error deleting message');
+            console.log('Error deleting message', error?.response || error);
+            const msg = error?.response?.data?.message || error?.message || 'Error deleting message';
+            toast.error(msg);
         }
     },
 
@@ -107,14 +110,16 @@ export const useChatStore = create((set, get) => ({
     },
 
     subscribeToMessages: () => {
-        const { selectedUser } = get();
-        if (!selectedUser) return;
-
         const socket = useAuthStore.getState().socket;
+        if (!socket) return;
 
         socket.on("newMessage", (newMessage) => {
-            if (String(newMessage.senderId) !== String(selectedUser._id) && String(newMessage.receiverId) !== String(selectedUser._id)) return;
-            set({ chats: [...get().chats, newMessage] });
+            // use latest selectedUser from store to ensure listener works across changes
+            const sel = get().selectedUser;
+            // if no conversation open, ignore (client could instead show a badge)
+            if (!sel) return;
+            if (String(newMessage.senderId) !== String(sel._id) && String(newMessage.receiverId) !== String(sel._id)) return;
+            set({ chats: [...(Array.isArray(get().chats) ? get().chats : []), newMessage] });
         });
 
         socket.on('editMessage', (message) => {

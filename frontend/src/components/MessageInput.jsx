@@ -1,122 +1,201 @@
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import { useChatStore } from "../store/useChatStore";
 import { X, Send, Image } from "lucide-react";
 import toast from "react-hot-toast";
 import { useAuthStore } from "../store/useAuthStore";
 
-const MessageInput = () => {
-    const [text, setText] = useState("");
-    const [imagePreview, setImagePreview] = useState(null);
-    const fileInputRef = useRef(null);
-    const { sendMessage } = useChatStore();
-    const { startTyping, stopTyping } = useChatStore();
-    const { authUser } = useAuthStore();
-    const typingTimeoutRef = useRef(null);
+const MessageInput = ({
+  editingId,
+  setEditingId,
+  editingText,
+  setEditingText,
+  editMessage,
+}) => {
+  const [text, setText] = useState("");
+  const [imagePreview, setImagePreview] = useState(null);
 
-    const handleImageChange = (e) => {
-        const file = e.target.files[0];
-        if (!file.type.startsWith("image/")) {
-            toast.error("Please select an image file.");
-            return;
-        };
+  const fileInputRef = useRef(null);
+  const typingTimeoutRef = useRef(null);
 
-        const reader = new FileReader();
-        reader.onload = () => {
-            setImagePreview(reader.result);
-        };
-        reader.readAsDataURL(file);
+  const { sendMessage, startTyping, stopTyping } = useChatStore();
+  const { authUser } = useAuthStore();
+
+  /* ---------------- IMAGE HANDLING ---------------- */
+
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please select an image file.");
+      return;
     }
 
-    const removeImage = () => {
-        setImagePreview(null);
-        if (fileInputRef.current) fileInputRef.current.value = null;
+    const reader = new FileReader();
+    reader.onload = () => setImagePreview(reader.result);
+    reader.readAsDataURL(file);
+  };
+
+  const removeImage = () => {
+    setImagePreview(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  /* ---------------- TYPING STATUS ---------------- */
+
+  const handleTyping = (value) => {
+    setText(value);
+
+    const receiverId = useChatStore.getState().selectedUser?._id;
+    if (!receiverId || !authUser) return;
+
+    startTyping(receiverId);
+
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+
+    typingTimeoutRef.current = setTimeout(() => {
+      stopTyping(receiverId);
+    }, 1500);
+  };
+
+  /* ---------------- SEND / EDIT MESSAGE ---------------- */
+
+  const handleSendMessage = async (e) => {
+    e.preventDefault();
+
+    if (!text.trim() && !imagePreview) return;
+
+    try {
+      if (editingId) {
+        await editMessage(editingId, text.trim());
+        setEditingId(null);
+        setEditingText("");
+      } else {
+        await sendMessage({
+          text: text.trim(),
+          image: imagePreview,
+        });
+      }
+
+      setText("");
+      setImagePreview(null);
+
+      if (fileInputRef.current) fileInputRef.current.value = "";
+
+      const receiverId = useChatStore.getState().selectedUser?._id;
+      if (receiverId) stopTyping(receiverId);
+
+    } catch (error) {
+      console.error("Failed sending message", error);
+      toast.error("Failed to send message");
     }
+  };
 
-    const handleSendMessage = async (e) => {
-        e.preventDefault();
-        if (!text.trim() && !imagePreview) return;
+  /* ---------------- SYNC EDIT TEXT ---------------- */
 
-        try {
-            await sendMessage({
-                text: text.trim(),
-                image: imagePreview,
-            });
-
-            // Clear the text and image in form
-            setText("");
-            setImagePreview(null);
-            if (fileInputRef.current) fileInputRef.current.value = "";
-            // stop typing after send
-            if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-            stopTyping(useChatStore.getState().selectedUser?._id);
-        } catch (error) {
-            console.log("Failed to sending message", error);
-        }
+  useEffect(() => {
+    if (editingId) {
+      setText(editingText || "");
     }
+  }, [editingId, editingText]);
 
-    
+  /* ---------------- AUTO EXPAND TEXTAREA ---------------- */
 
-    return (
-        <div className="p-4 w-full message-input-wrap">
-            {imagePreview && (
-                <div className="mb-3 flex items-center gap-2">
-                    <div className="relative">
-                        <img
-                            src={imagePreview}
-                            alt="Preview"
-                            className="w-20 h-20 object-cover rounded-lg border border-zinc-700"
-                        />
-                        <button
-                            onClick={removeImage}
-                            className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-base-300
-                                flex items-center justify-center"
-                            type="button"
-                        >
-                            <X className="size-3" />
-                        </button>
-                    </div>
-                </div>
-            )}
+  const autoResize = (e) => {
+    e.target.style.height = "auto";
+    e.target.style.height = e.target.scrollHeight + "px";
+  };
 
+  return (
+    <div className="p-4 w-full border-t bg-base-100">
 
-            <form onSubmit={handleSendMessage} className="flex items-center gap-2" aria-label="Send message form">
-                <div className="flex-1 flex gap-2">
-                    <input
-                        type="text"
-                        className="w-full input input-bordered rounded-lg input-sm sm:input-md bg-transparent"
-                        placeholder="Type a message..."
-                        aria-label="Message text"
-                        value={text}
-                        onChange={(e) => {
-                            setText(e.target.value);
-                            // emit typing with debounce
-                            const receiverId = useChatStore.getState().selectedUser?._id;
-                            if (!receiverId || !authUser) return;
-                            startTyping(receiverId);
-                            if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-                            typingTimeoutRef.current = setTimeout(() => {
-                                stopTyping(receiverId);
-                            }, 1500);
-                        }}
-                    />
-                    <input type="file" accept="image/*" className="hidden" ref={fileInputRef} onChange={handleImageChange} aria-label="Attach image" />
+      {/* Image preview */}
+      {imagePreview && (
+        <div className="mb-3 flex items-center gap-3">
+          <div className="relative">
+            <img
+              src={imagePreview}
+              alt="Preview"
+              className="w-20 h-20 rounded-lg object-cover border"
+            />
 
-                    <button type="button" aria-label="Attach image" className={`hidden sm:flex btn btn-circle btn-ghost-soft ${imagePreview ? "text-emerald-500" : "text-zinc-400"}`} onClick={() => fileInputRef.current?.click()}>
-                        <Image size={20} />
-                    </button>
-                </div>
-
-                <button
-                    type="submit"
-                    className={"btn btn-sm btn-circle btn-primary-glow" + (!text.trim() && !imagePreview ? " opacity-60 cursor-not-allowed" : " animate-send")}
-                    disabled={!text.trim() && !imagePreview}
-                    aria-label="Send message"
-                >
-                    <Send size={22} />
-                </button>
-            </form>
+            <button
+              type="button"
+              onClick={removeImage}
+              className="absolute -top-2 -right-2 btn btn-circle btn-xs"
+            >
+              <X size={14} />
+            </button>
+          </div>
         </div>
-    )
-}
+      )}
 
-export default MessageInput
+      {/* Edit indicator */}
+      {editingId && (
+        <div className="text-xs text-warning mb-2 flex justify-between">
+          <span>Editing message...</span>
+
+          <button
+            className="text-error"
+            onClick={() => {
+              setEditingId(null);
+              setText("");
+            }}
+          >
+            Cancel
+          </button>
+        </div>
+      )}
+
+      {/* Message form */}
+      <form
+        onSubmit={handleSendMessage}
+        className="flex items-end gap-2"
+      >
+
+        {/* Text area */}
+        <textarea
+          rows={1}
+          value={text}
+          placeholder="Type a message..."
+          className="textarea textarea-bordered w-full resize-none"
+          onChange={(e) => handleTyping(e.target.value)}
+          onInput={autoResize}
+        />
+
+        {/* Hidden file input */}
+        <input
+          type="file"
+          accept="image/*"
+          ref={fileInputRef}
+          onChange={handleImageChange}
+          className="hidden"
+        />
+
+        {/* Image button */}
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          className={`btn btn-circle btn-ghost ${
+            imagePreview ? "text-success" : ""
+          }`}
+        >
+          <Image size={20} />
+        </button>
+
+        {/* Send button */}
+        <button
+          type="submit"
+          disabled={!text.trim() && !imagePreview}
+          className="btn btn-circle btn-primary"
+        >
+          <Send size={18} />
+        </button>
+
+      </form>
+    </div>
+  );
+};
+
+export default MessageInput;

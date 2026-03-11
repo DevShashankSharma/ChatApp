@@ -34,7 +34,7 @@ const ChatContainer = () => {
         markRead();
 
         return () => unsubscribeFromMessages();
-    }, [selectedUser, getChats, subscribeToMessages, unsubscribeFromMessages]);
+    }, [selectedUser, getChats, subscribeToMessages, unsubscribeFromMessages, markAsRead, authUser._id]);
     // console.log(Array.isArray(chats), chats);
 
     useEffect(() => {
@@ -48,7 +48,13 @@ const ChatContainer = () => {
             <div className="flex flex-1 flex-col h-full overflow-auto">
                 <ChatHeader />
                 <MessageSkeleton />
-                <MessageInput />
+                <MessageInput
+                    editingId={editingId}
+                    setEditingId={setEditingId}
+                    editingText={editingText}
+                    setEditingText={setEditingText}
+                    editMessage={editMessage}
+                />
             </div>
         );
     }
@@ -59,14 +65,32 @@ const ChatContainer = () => {
 
             <div className="flex-1 overflow-y-auto p-4 space-y-4" role="log" aria-live="polite" aria-atomic="false">
                 {chats.map((chat, idx) => (
-                    <MessageBubble key={chat._id} chat={chat} selectedUser={selectedUser} isLast={idx === chats.length - 1} />
+                    <MessageBubble
+                        key={chat._id}
+                        chat={chat}
+                        selectedUser={selectedUser}
+                        isLast={idx === chats.length - 1}
+                        editingId={editingId}
+                        setEditingId={setEditingId}
+                        editingText={editingText}
+                        setEditingText={setEditingText}
+                        editMessage={editMessage}
+                        deleteMessage={deleteMessage}
+                        addReaction={addReaction}
+                    />
                 ))}
                 {isTyping && (
                     <div className="p-2 text-sm opacity-70">Typing...</div>
                 )}
             </div>
 
-            <MessageInput />
+            <MessageInput
+                editingId={editingId}
+                setEditingId={setEditingId}
+                editingText={editingText}
+                setEditingText={setEditingText}
+                editMessage={editMessage}
+            />
         </div>
     );
 }

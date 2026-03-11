@@ -25,6 +25,14 @@ const App = () => {
 
   console.log("AuthUser", onlineUsers)
 
+  useEffect(() => {
+    if (typeof document !== 'undefined' && document.documentElement) {
+      document.documentElement.setAttribute('data-theme', theme || 'light');
+      // also set on body fallback
+      document.body.setAttribute('data-theme', theme || 'light');
+    }
+  }, [theme])
+
   if (isCheckingAuth && !authUser) {
     return (
       <div className='flex items-center justify-center h-screen'>
@@ -32,6 +40,7 @@ const App = () => {
       </div>
     )
   }
+  
 
   return (
     <div data-theme={theme} className="min-h-screen pt-20">

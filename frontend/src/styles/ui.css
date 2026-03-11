@@ -120,6 +120,3 @@ body{
 .message-new { box-shadow: 0 8px 30px rgba(108,92,231,0.06); transform: translateY(-2px); }
 .unread-count{background:#ef4444;color:#fff;padding:2px 6px;border-radius:999px;font-size:12px}
 
-/* make unread badge visible on compact avatar too */
-.w-20 .unread-count, .w-72 .unread-count{display:inline-flex}
-

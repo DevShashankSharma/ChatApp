@@ -22,10 +22,9 @@ const SettingsPage = () => {
                     {THEMES.map((t) => (
                         <button
                             key={t}
-                            className={`
-                                group flex flex-col items-center gap-1.5 p-2 rounded-lg transition-colors cursor-pointer
-                                ${theme === t ? "bg-gray-500" : "hover:bg-gray-700"}
-                            `}
+                            type="button"
+                            aria-pressed={theme === t}
+                            className={`group flex flex-col items-center gap-1.5 p-2 rounded-lg transition-colors cursor-pointer ${theme === t ? 'ring-2 ring-primary' : 'hover:bg-gray-700'}`}
                             onClick={() => setTheme(t)}
                         >
                             <div className="relative h-8 w-full rounded-md overflow-hidden" data-theme={t}>
@@ -45,7 +44,7 @@ const SettingsPage = () => {
 
                 {/* Preview Section */}
                 <h3 className="text-lg font-semibold mb-3">Preview</h3>
-                <div className="rounded-xl border border-base-300 overflow-hidden bg-base-100 shadow-lg">
+                <div className="rounded-xl border border-base-300 overflow-hidden bg-base-100 shadow-lg" data-theme={theme}>
                     <div className="p-4 bg-base-200">
                         <div className="max-w-lg mx-auto">
                             {/* Mock Chat UI */}
