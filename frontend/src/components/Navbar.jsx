@@ -4,25 +4,22 @@ import { Link } from "react-router-dom";
 const Navbar = () => {
     const { authUser, logout, isAdmin } = useAuthStore();
     return (
-        <header className="border-b border-base-400/30 fixed w-full top-0 z-40 p-4 backdrop-blur-lg bg-base-100/80">
-            <div className="container mx-auto px-4 h-6">
-                <div className="flex items-center justify-between h-full">
+        <header className="topbar fixed w-full top-0 z-40 p-4">
+                <div className="container mx-auto px-4 h-6">
+                    <div className="flex items-center justify-between h-full">
                     {/* {left side} */}
                     <div className="flex items-center gap-8">
-                        <Link to="/" className="flex items-center gap-2.5 hover:opacity-80 transition-all">
-                            <div className="size-9 rounded-lg bg-primary/10 flex items-center justify-center">
-                                <MessagesSquare className="size-5 text-primary" />
+                        <Link to="/" className="flex items-center gap-3 hover:opacity-90 transition-all">
+                            <div className="size-9 rounded-lg bg-gradient-to-br from-[#6c5ce7] to-[#8b7bff] flex items-center justify-center shadow-md avatar-ring">
+                                <MessagesSquare className="size-5 text-white" />
                             </div>
-                            <h1 className="text-lg font-bold">Chatify</h1>
+                            <h1 className="text-lg font-bold brand-badge">Chatify</h1>
                         </Link>
                     </div>
 
                     {/* { right side} */}
                     <div className="flex items-center gap-2">
-                        <Link
-                            to="/settings"
-                            className={`btn btn-sm transition-colors`}
-                        >
+                        <Link to="/settings" className="btn btn-sm btn-ghost-soft" aria-label="Settings">
                             <Settings className="size-4" />
                             <span className="hidden sm:inline">Settings</span>
                         </Link>
@@ -30,19 +27,16 @@ const Navbar = () => {
                         {authUser && (
                             <>
                                 {isAdmin && (
-                                    <Link to="/admin/announcements" className="btn btn-sm">
+                                    <Link to="/admin/announcements" className="btn btn-sm" aria-label="Admin announcements">
                                         Admin
                                     </Link>
                                 )}
-                                <Link to="/profile" className="btn btn-sm gap-2">
+                                <Link to="/profile" className="btn btn-sm gap-2 btn-ghost-soft" aria-label="Profile">
                                     <User className="size-5" />
                                     <span className="hidden sm:inline">Profile</span>
                                 </Link>
 
-                                <button
-                                    onClick={logout}
-                                    className="flex gap-2 items-center"
-                                >
+                                <button onClick={logout} className="flex gap-2 items-center btn-ghost-soft" aria-label="Logout">
                                     <LogOut className="size-5" />
                                     <span className="hidden sm:inline">Logout</span>
                                 </button>

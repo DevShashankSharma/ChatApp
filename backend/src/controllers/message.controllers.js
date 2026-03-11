@@ -13,9 +13,15 @@ export const getUsersForSidebar = async (req, res) => {
     try {
         //! Get all users except the logged in user
         const loggedInUserId = req.user._id;
-        const filteredUsers = await User.find({ _id: { $ne: loggedInUserId } }).select("-password");
+        const users = await User.find({ _id: { $ne: loggedInUserId } }).select("-password");
 
-        //! Send the filtered users
+        // For each user compute unread messages count where logged in user is receiver
+        const filteredUsers = await Promise.all(users.map(async (u) => {
+            const unreadCount = await Message.countDocuments({ senderId: u._id, receiverId: loggedInUserId, readBy: { $ne: loggedInUserId } });
+            return { ...u.toObject(), unreadCount };
+        }));
+
+        //! Send the filtered users with unread counts
         res.status(200).json({ filteredUsers });
     } catch (error) {
         console.log("Error in getUsersForSidebar Controller", error);

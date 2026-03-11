@@ -57,7 +57,7 @@ const MessageInput = () => {
     
 
     return (
-        <div className="p-4 w-full">
+        <div className="p-4 w-full message-input-wrap">
             {imagePreview && (
                 <div className="mb-3 flex items-center gap-2">
                     <div className="relative">
@@ -79,12 +79,13 @@ const MessageInput = () => {
             )}
 
 
-            <form onSubmit={handleSendMessage} className="flex items-center gap-2">
+            <form onSubmit={handleSendMessage} className="flex items-center gap-2" aria-label="Send message form">
                 <div className="flex-1 flex gap-2">
                     <input
                         type="text"
-                        className="w-full input input-bordered rounded-lg input-sm sm:input-md"
+                        className="w-full input input-bordered rounded-lg input-sm sm:input-md bg-transparent"
                         placeholder="Type a message..."
+                        aria-label="Message text"
                         value={text}
                         onChange={(e) => {
                             setText(e.target.value);
@@ -98,28 +99,18 @@ const MessageInput = () => {
                             }, 1500);
                         }}
                     />
-                    <input
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        ref={fileInputRef}
-                        onChange={handleImageChange}
-                    />
+                    <input type="file" accept="image/*" className="hidden" ref={fileInputRef} onChange={handleImageChange} aria-label="Attach image" />
 
-                    <button
-                        type="button"
-                        className={`hidden sm:flex btn btn-circle
-                                ${imagePreview ? "text-emerald-500" : "text-zinc-400"}`}
-                        onClick={() => fileInputRef.current?.click()}
-                    >
+                    <button type="button" aria-label="Attach image" className={`hidden sm:flex btn btn-circle btn-ghost-soft ${imagePreview ? "text-emerald-500" : "text-zinc-400"}`} onClick={() => fileInputRef.current?.click()}>
                         <Image size={20} />
                     </button>
                 </div>
 
                 <button
                     type="submit"
-                    className="btn btn-sm btn-circle"
+                    className={"btn btn-sm btn-circle btn-primary-glow" + (!text.trim() && !imagePreview ? " opacity-60 cursor-not-allowed" : " animate-send")}
                     disabled={!text.trim() && !imagePreview}
+                    aria-label="Send message"
                 >
                     <Send size={22} />
                 </button>

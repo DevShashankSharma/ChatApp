@@ -95,20 +95,15 @@ const AnnouncementPanel = () => {
     }
 
     return (
-        <div className="p-3 border-b border-base-300">
+        <div className="p-3 border-b border-base-300 ui-card">
             <div className="font-semibold mb-2">Announcements</div>
 
             {isAdmin && (
-                <form onSubmit={handleSubmit} className="mb-3">
-                    <input
-                        value={text}
-                        onChange={handleChange}
-                        placeholder="Share an update..."
-                        className="input input-sm w-full mb-2"
-                    />
+                <form onSubmit={handleSubmit} className="mb-3" aria-label="Post announcement">
+                    <input value={text} onChange={handleChange} placeholder="Share an update..." className="input input-sm w-full mb-2" aria-label="Announcement text" />
                     <div className="grid grid-cols-2 gap-2 mb-2">
-                        <input type="datetime-local" value={startAt} onChange={(e) => setStartAt(e.target.value)} className="input input-sm" />
-                        <input type="datetime-local" value={endAt} onChange={(e) => setEndAt(e.target.value)} className="input input-sm" />
+                        <input type="datetime-local" value={startAt} onChange={(e) => setStartAt(e.target.value)} className="input input-sm" aria-label="Announcement start" />
+                        <input type="datetime-local" value={endAt} onChange={(e) => setEndAt(e.target.value)} className="input input-sm" aria-label="Announcement end" />
                     </div>
                     <div className="flex justify-end">
                         <button className="btn btn-sm btn-primary" type="submit">Post</button>
@@ -125,13 +120,13 @@ const AnnouncementPanel = () => {
                     <div className="text-xs text-zinc-500">No announcements</div>
                 )}
                 {announcements.map(a => (
-                    <div key={a._id} className="bg-base-200 rounded p-2 text-sm">
+                    <div key={a._id} className="announcement-card text-sm">
                         <div className="flex items-center justify-between">
                             <div className="font-medium text-xs opacity-80">{a.isAdmin ? 'Admin' : 'User'}</div>
                             {isAdmin && (
                                 <div className="space-x-1">
-                                    <button className="btn btn-xs btn-ghost" onClick={() => handleEdit(a)}>Edit</button>
-                                    <button className="btn btn-xs btn-outline btn-error" onClick={() => handleDelete(a._id)}>Delete</button>
+                                    <button className="btn btn-xs btn-ghost" onClick={() => handleEdit(a)} aria-label={`Edit announcement ${a._id}`}>Edit</button>
+                                    <button className="btn btn-xs btn-outline btn-error" onClick={() => handleDelete(a._id)} aria-label={`Delete announcement ${a._id}`}>Delete</button>
                                 </div>
                             )}
                         </div>
