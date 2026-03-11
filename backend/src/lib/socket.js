@@ -15,6 +15,9 @@ const io = new Server(server, {
     }
 });
 
+// meeting rooms map: roomId -> Set of socketIds
+const meetingRooms = {};
+
 export const getReceiverSocketId = (receiverId) => {
     return userSocketMap[receiverId];
 }
@@ -78,6 +81,36 @@ io.on("connection", (socket) => {
         // broadcast updated online list and presence event
         io.emit("getOnlineUsers", Object.keys(userSocketMap));
         io.emit("userOffline");
+    });
+
+    // ----- Meeting room handlers -----
+    socket.on('joinMeeting', ({ roomId }) => {
+        if (!roomId) return;
+        socket.join(roomId);
+        if (!meetingRooms[roomId]) meetingRooms[roomId] = new Set();
+        meetingRooms[roomId].add(socket.id);
+
+        // send existing participants to the joining socket
+        const others = Array.from(meetingRooms[roomId]).filter(id => id !== socket.id);
+        io.to(socket.id).emit('allParticipants', { participants: others });
+
+        // notify others that a new participant joined
+        socket.to(roomId).emit('newParticipant', { socketId: socket.id });
+    });
+
+    socket.on('signal', ({ to, signal }) => {
+        if (!to) return;
+        io.to(to).emit('signal', { from: socket.id, signal });
+    });
+
+    socket.on('leaveMeeting', ({ roomId }) => {
+        if (!roomId) return;
+        socket.leave(roomId);
+        if (meetingRooms[roomId]) {
+            meetingRooms[roomId].delete(socket.id);
+            socket.to(roomId).emit('participantLeft', { socketId: socket.id });
+            if (meetingRooms[roomId].size === 0) delete meetingRooms[roomId];
+        }
     });
 
     // Read receipt: payload { messageId, readerId }

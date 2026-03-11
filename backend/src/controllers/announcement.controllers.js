@@ -14,7 +14,7 @@ export const getAnnouncements = async (req, res) => {
     }
 };
 
-export const createAnnouncement = async (req, res) => {
+export const createAnnouncement = async (req, res) => { 
     try {
         // only admin can create announcements
         if (!req.user || req.user.email !== process.env.ADMIN_EMAIL) {
