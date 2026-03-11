@@ -107,6 +107,14 @@ export const useAuthStore = create((set, get) => ({
             set((state) => ({ announcements: [announcement, ...state.announcements] }));
         });
 
+        socket.on('announcement:update', (announcement) => {
+            set((state) => ({ announcements: state.announcements.map(a => a._id === announcement._id ? announcement : a) }));
+        });
+
+        socket.on('announcement:delete', ({ id }) => {
+            set((state) => ({ announcements: state.announcements.filter(a => a._id !== id) }));
+        });
+
         socket.on('typingAll', ({ userId }) => {
             set({ typingAllUser: userId });
         });
@@ -141,6 +149,16 @@ export const useAuthStore = create((set, get) => ({
         }
     },
 
+    fetchAllAnnouncements: async () => {
+        try {
+            const res = await axiosInstance.get('/announcements/all');
+            return res.data.announcements || [];
+        } catch (error) {
+            console.log('Error fetching all announcements', error);
+            throw error;
+        }
+    },
+
     postAnnouncement: async (payload) => {
         try {
             const res = await axiosInstance.post('/announcements', payload);
@@ -149,6 +167,27 @@ export const useAuthStore = create((set, get) => ({
             return res.data.announcement;
         } catch (error) {
             console.log('Error posting announcement', error);
+            throw error;
+        }
+    },
+
+    editAnnouncement: async (id, payload) => {
+        try {
+            const res = await axiosInstance.put(`/announcements/${id}`, payload);
+            set((state) => ({ announcements: state.announcements.map(a => a._id === id ? res.data.announcement : a) }));
+            return res.data.announcement;
+        } catch (error) {
+            console.log('Error editing announcement', error);
+            throw error;
+        }
+    },
+
+    deleteAnnouncement: async (id) => {
+        try {
+            await axiosInstance.delete(`/announcements/${id}`);
+            set((state) => ({ announcements: state.announcements.filter(a => a._id !== id) }));
+        } catch (error) {
+            console.log('Error deleting announcement', error);
             throw error;
         }
     },

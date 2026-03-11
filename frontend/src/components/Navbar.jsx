@@ -2,7 +2,7 @@ import { LogOut, MessagesSquare, Settings, User } from "lucide-react";
 import { useAuthStore } from "../store/useAuthStore";
 import { Link } from "react-router-dom";
 const Navbar = () => {
-    const { authUser, logout } = useAuthStore();
+    const { authUser, logout, isAdmin } = useAuthStore();
     return (
         <header className="border-b border-base-400/30 fixed w-full top-0 z-40 p-4 backdrop-blur-lg bg-base-100/80">
             <div className="container mx-auto px-4 h-6">
@@ -29,6 +29,11 @@ const Navbar = () => {
 
                         {authUser && (
                             <>
+                                {isAdmin && (
+                                    <Link to="/admin/announcements" className="btn btn-sm">
+                                        Admin
+                                    </Link>
+                                )}
                                 <Link to="/profile" className="btn btn-sm gap-2">
                                     <User className="size-5" />
                                     <span className="hidden sm:inline">Profile</span>
